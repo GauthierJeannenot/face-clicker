@@ -4,21 +4,35 @@ const SOUNDS = ['Aïe !', 'Ouille !', 'Oulà !']
 
 let cachedVoice: SpeechSynthesisVoice | null = null
 
+// Voix féminines à exclure (Windows, macOS, iOS, Android)
+const FEMALE_NAMES = /hortense|amelie|amé|audrey|aurelie|aurélie|fiona|alice|marie|julie|claire|léa|lea|samantha|karen|victoria|moira|tessa|veena/i
+
+// Voix masculines prioritaires (Windows, macOS, iOS, Android)
+const MALE_NAMES = /paul|thomas|nicolas|reed|malo|damien|pierre|martin|google français|fr.*male/i
+
+function pickMaleVoice(voices: SpeechSynthesisVoice[]) {
+  const fr = voices.filter(v => v.lang.startsWith('fr'))
+  return (
+    fr.find(v => MALE_NAMES.test(v.name)) ??
+    fr.find(v => !FEMALE_NAMES.test(v.name)) ??
+    fr[0] ??
+    null
+  )
+}
+
 function loadVoice() {
   const voices = window.speechSynthesis.getVoices()
   if (!voices.length) return
-  // Voix masculines françaises connues sur Windows/macOS
-  const maleFrench =
-    voices.find(v => v.lang.startsWith('fr') && /paul|thomas|nicolas|reed|malo/i.test(v.name)) ??
-    voices.find(v => v.lang.startsWith('fr') && !/hortense|amelie|audrey|aurelie|fiona/i.test(v.name)) ??
-    voices.find(v => v.lang.startsWith('fr'))
-  cachedVoice = maleFrench ?? null
+  cachedVoice = pickMaleVoice(voices)
 }
 
 window.speechSynthesis.addEventListener('voiceschanged', loadVoice)
 loadVoice()
 
 function speak(text: string) {
+  // Sur iOS, getVoices() ne retourne rien avant la première interaction
+  if (!cachedVoice) loadVoice()
+
   const utterance = new SpeechSynthesisUtterance(text)
   utterance.lang = 'fr-FR'
   utterance.rate = 0.82
