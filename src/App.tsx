@@ -1,27 +1,21 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useLayoutEffect } from 'react'
 
 const SOUNDS = ['Aïe !', 'Ouille !', 'Oulà !']
 
-// Animation timing
-const FALL_DURATION = 160  // ms jusqu'à l'impact
-const TOTAL_DURATION = 480 // ms animation complète
+const TOTAL_DURATION = 420  // ms pour traverser toute la page
+const IMPACT_AT      = 200  // ms : impact au centre (50vw)
 
-// Keyframes injectés une seule fois
 const sheet = new CSSStyleSheet()
 sheet.replaceSync(`
-  @keyframes slapFall {
-    0%   { transform: translateX(-50%) rotate(180deg) translateY(0px);   }
-    100% { transform: translateX(-50%) rotate(180deg) translateY(700px);  }
-  }
-  @keyframes slapReturn {
-    0%   { transform: translateX(-50%) rotate(180deg) translateY(700px);  }
-    100% { transform: translateX(-50%) rotate(180deg) translateY(0px);    }
+  @keyframes slapAcross {
+    from { transform: translateX(-150px) rotate(90deg); }
+    to   { transform: translateX(calc(100vw + 150px)) rotate(90deg); }
   }
   @keyframes faceHit {
-    0%   { transform: scale(1)    translateX(0);   }
-    25%  { transform: scale(0.93, 1.07) translateX(8px);  }
-    55%  { transform: scale(1.03, 0.96) translateX(-4px); }
-    100% { transform: scale(1)    translateX(0);   }
+    0%   { transform: scale(1) translateX(0);      }
+    25%  { transform: scale(0.93, 1.07) translateX(12px); }
+    60%  { transform: scale(1.03, 0.96) translateX(-5px); }
+    100% { transform: scale(1) translateX(0);      }
   }
 `)
 document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
@@ -61,75 +55,85 @@ function speak(text: string) {
   window.speechSynthesis.speak(utterance)
 }
 
-type Phase = 'idle' | 'falling' | 'returning'
-
 export default function App() {
-  const [phase, setPhase]   = useState<Phase>('idle')
-  const [label, setLabel]   = useState<string | null>(null)
-  const [faceHit, setFaceHit] = useState(false)
-  const busy = useRef(false)
+  const [slapping, setSlapping] = useState(false)
+  const [label, setLabel]       = useState<string | null>(null)
+  const [faceHit, setFaceHit]   = useState(false)
+  const [handTop, setHandTop]   = useState(0)
+  const faceRef = useRef<HTMLDivElement>(null)
+  const busy    = useRef(false)
+
+  useLayoutEffect(() => {
+    if (faceRef.current) {
+      const r = faceRef.current.getBoundingClientRect()
+      setHandTop(r.top + r.height / 2 - 45) // centré verticalement sur le visage
+    }
+  }, [])
 
   const handleClick = useCallback(() => {
     if (busy.current) return
     busy.current = true
-    setPhase('falling')
 
-    // Impact
+    // Recalcule la position au moment du clic (scroll possible)
+    if (faceRef.current) {
+      const r = faceRef.current.getBoundingClientRect()
+      setHandTop(r.top + r.height / 2 - 45)
+    }
+
+    setSlapping(true)
+
     setTimeout(() => {
       const sound = SOUNDS[Math.floor(Math.random() * SOUNDS.length)]
       speak(sound)
       setLabel(sound)
       setFaceHit(true)
-      setPhase('returning')
       setTimeout(() => setFaceHit(false), 400)
       setTimeout(() => setLabel(null), 1200)
-    }, FALL_DURATION)
+    }, IMPACT_AT)
 
-    // Fin
     setTimeout(() => {
-      setPhase('idle')
+      setSlapping(false)
       busy.current = false
     }, TOTAL_DURATION)
   }, [])
 
-  const handStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: '-110px',
-    left: '50%',
-    fontSize: '90px',
-    lineHeight: 1,
-    pointerEvents: 'none',
-    userSelect: 'none',
-    transform: 'translateX(-50%) rotate(180deg)',
-    animation:
-      phase === 'falling'   ? `slapFall ${FALL_DURATION}ms cubic-bezier(0.4,0,1,1) forwards` :
-      phase === 'returning' ? `slapReturn ${TOTAL_DURATION - FALL_DURATION}ms ease-out forwards` :
-      'none',
-    opacity: phase === 'idle' ? 0 : 1,
-  }
-
-  const faceStyle: React.CSSProperties = {
-    ...styles.imageWrapper,
-    animation: faceHit ? `faceHit 400ms ease-out` : 'none',
-  }
-
   return (
-    <div style={styles.page}>
+    <div style={styles.page} onClick={handleClick}>
       <div style={styles.card}>
-        <div style={styles.slapZone} onClick={handleClick}>
-          <div style={handStyle}>🖐️</div>
-          <div style={faceStyle}>
-            <img
-              src={`${import.meta.env.BASE_URL}face.webp`}
-              alt="Visage"
-              style={styles.image}
-              draggable={false}
-            />
-            {label && <div style={styles.bubble}>{label}</div>}
-          </div>
+        <div
+          ref={faceRef}
+          style={{
+            ...styles.imageWrapper,
+            animation: faceHit ? 'faceHit 400ms ease-out' : 'none',
+          }}
+        >
+          <img
+            src={`${import.meta.env.BASE_URL}face.webp`}
+            alt="Visage"
+            style={styles.image}
+            draggable={false}
+          />
+          {label && <div style={styles.bubble}>{label}</div>}
         </div>
         <p style={styles.hint}>Clique sur le visage !</p>
       </div>
+
+      {slapping && (
+        <div
+          style={{
+            position: 'fixed',
+            top: handTop,
+            left: 0,
+            fontSize: '90px',
+            lineHeight: 1,
+            pointerEvents: 'none',
+            userSelect: 'none',
+            animation: `slapAcross ${TOTAL_DURATION}ms linear forwards`,
+          }}
+        >
+          🖐️
+        </div>
+      )}
     </div>
   )
 }
@@ -142,17 +146,14 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     background: '#f0e9e0',
     fontFamily: 'sans-serif',
+    overflow: 'hidden',
+    cursor: "url(\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'><text y='36' font-size='36'>🖐️</text></svg>\") 20 20, pointer",
   },
   card: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     gap: '16px',
-  },
-  slapZone: {
-    position: 'relative',
-    paddingTop: '120px',
-    cursor: "url(\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'><text y='36' font-size='36'>🖐️</text></svg>\") 20 20, pointer",
   },
   imageWrapper: {
     position: 'relative',
