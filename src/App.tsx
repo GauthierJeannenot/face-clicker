@@ -23,7 +23,9 @@ function pickMaleVoice(voices: SpeechSynthesisVoice[]) {
 function loadVoice() {
   const voices = window.speechSynthesis.getVoices()
   if (!voices.length) return
+  console.log('[voices]', voices.map(v => `${v.name} (${v.lang})`).join(', '))
   cachedVoice = pickMaleVoice(voices)
+  console.log('[selected]', cachedVoice?.name ?? 'none')
 }
 
 window.speechSynthesis.addEventListener('voiceschanged', loadVoice)
@@ -36,7 +38,7 @@ function speak(text: string) {
   const utterance = new SpeechSynthesisUtterance(text)
   utterance.lang = 'fr-FR'
   utterance.rate = 0.82
-  utterance.pitch = 0.55
+  utterance.pitch = 0.2
   utterance.volume = 1
   if (cachedVoice) utterance.voice = cachedVoice
   window.speechSynthesis.cancel()
