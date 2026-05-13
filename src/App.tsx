@@ -11,10 +11,10 @@ const sheet = new CSSStyleSheet()
 sheet.replaceSync(`
   @keyframes slapFall {
     0%   { transform: translateX(-50%) rotate(180deg) translateY(0px);   }
-    100% { transform: translateX(-50%) rotate(180deg) translateY(350px);  }
+    100% { transform: translateX(-50%) rotate(180deg) translateY(700px);  }
   }
   @keyframes slapReturn {
-    0%   { transform: translateX(-50%) rotate(180deg) translateY(350px);  }
+    0%   { transform: translateX(-50%) rotate(180deg) translateY(700px);  }
     100% { transform: translateX(-50%) rotate(180deg) translateY(0px);    }
   }
   @keyframes faceHit {
