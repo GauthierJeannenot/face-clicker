@@ -53,7 +53,7 @@ export default function App() {
           onClick={handleClick}
         >
           <img
-            src="/face.webp"
+            src={`${import.meta.env.BASE_URL}face.webp`}
             alt="Visage"
             style={styles.image}
             draggable={false}
