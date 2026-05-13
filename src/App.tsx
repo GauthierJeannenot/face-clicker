@@ -3,18 +3,18 @@ import { useState, useCallback, useRef } from 'react'
 const SOUNDS = ['Aïe !', 'Ouille !', 'Oulà !']
 
 // Animation timing
-const FALL_DURATION = 320  // ms jusqu'à l'impact
-const TOTAL_DURATION = 600 // ms animation complète
+const FALL_DURATION = 160  // ms jusqu'à l'impact
+const TOTAL_DURATION = 480 // ms animation complète
 
 // Keyframes injectés une seule fois
 const sheet = new CSSStyleSheet()
 sheet.replaceSync(`
   @keyframes slapFall {
     0%   { transform: translateX(-50%) rotate(180deg) translateY(0px);   }
-    100% { transform: translateX(-50%) rotate(180deg) translateY(220px);  }
+    100% { transform: translateX(-50%) rotate(180deg) translateY(350px);  }
   }
   @keyframes slapReturn {
-    0%   { transform: translateX(-50%) rotate(180deg) translateY(220px);  }
+    0%   { transform: translateX(-50%) rotate(180deg) translateY(350px);  }
     100% { transform: translateX(-50%) rotate(180deg) translateY(0px);    }
   }
   @keyframes faceHit {
