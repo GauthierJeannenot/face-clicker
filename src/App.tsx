@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 
 const SOUNDS = ['Aïe !', 'Ouille !', 'Oulà !']
 
@@ -48,6 +48,8 @@ function speak(text: string) {
 export default function App() {
   const [label, setLabel] = useState<string | null>(null)
   const [shaking, setShaking] = useState(false)
+  const [debugInfo, setDebugInfo] = useState<string | null>(null)
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleClick = useCallback(() => {
     const sound = SOUNDS[Math.floor(Math.random() * SOUNDS.length)]
@@ -56,6 +58,19 @@ export default function App() {
     setShaking(true)
     setTimeout(() => setShaking(false), 400)
     setTimeout(() => setLabel(null), 1200)
+  }, [])
+
+  const handlePressStart = useCallback(() => {
+    longPressTimer.current = setTimeout(() => {
+      loadVoice()
+      const voices = window.speechSynthesis.getVoices()
+      const lines = voices.map(v => `${v.name} (${v.lang})`).join('\n') || 'Aucune voix trouvée'
+      setDebugInfo(`Voix dispo :\n${lines}\n\nSélectionnée :\n${cachedVoice?.name ?? 'aucune'}`)
+    }, 800)
+  }, [])
+
+  const handlePressEnd = useCallback(() => {
+    if (longPressTimer.current) clearTimeout(longPressTimer.current)
   }, [])
 
   return (
@@ -67,6 +82,10 @@ export default function App() {
             ...(shaking ? styles.shake : {}),
           }}
           onClick={handleClick}
+          onMouseDown={handlePressStart}
+          onMouseUp={handlePressEnd}
+          onTouchStart={handlePressStart}
+          onTouchEnd={handlePressEnd}
         >
           <img
             src={`${import.meta.env.BASE_URL}face.webp`}
@@ -76,7 +95,12 @@ export default function App() {
           />
           {label && <div style={styles.bubble}>{label}</div>}
         </div>
-        <p style={styles.hint}>Clique sur le visage !</p>
+        <p style={styles.hint}>Clique · Appui long = debug voix</p>
+        {debugInfo && (
+          <pre style={styles.debug} onClick={() => setDebugInfo(null)}>
+            {debugInfo}
+          </pre>
+        )}
       </div>
     </div>
   )
@@ -138,5 +162,18 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#888',
     fontSize: '0.95rem',
     margin: 0,
+  },
+  debug: {
+    background: '#1e1e1e',
+    color: '#7fffb2',
+    fontSize: '0.75rem',
+    padding: '12px',
+    borderRadius: '8px',
+    maxWidth: '90vw',
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-all',
+    cursor: 'pointer',
+    maxHeight: '40vh',
+    overflowY: 'auto',
   },
 }
